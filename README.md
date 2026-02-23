@@ -1,10 +1,11 @@
 <div align="center">
-  <img src="./Logo.png" alt="Inkwell Logo" width="200" style="border-radius: 20px; border: 3px solid #1a1a2e; box-shadow: 6px 6px 0px #1a1a2e;" />
+  <img src="./Logo.png" alt="Inkwell Logo" width="450" style="border-radius: 24px; border: 4px solid #1a1a2e; box-shadow: 10px 10px 0px #1a1a2e;" />
   <h1>Inkwell</h1>
   <p><strong>Personal Local Learning Management System (LMS)</strong></p>
   
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
   [![Local Only](https://img.shields.io/badge/Privacy-100%25_Local-brightgreen)](#)
+  [![Built with AI](https://img.shields.io/badge/Built%20with-AI-%238A2BE2)](#)
 </div>
 
 ---
@@ -53,5 +54,5 @@ Inkwell isn't just a tool; it's a sketchbook for your mind. Every border is a **
 ---
 
 <p align="center">
-  Built with ❤️ for learners who value their local data.
+  Built with ❤️ by <b>yahiaal</b> with the help of <b>AI</b>.
 </p>
