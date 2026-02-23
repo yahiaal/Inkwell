@@ -54,5 +54,5 @@ Inkwell isn't just a tool; it's a sketchbook for your mind. Every border is a **
 ---
 
 <p align="center">
-  Built with ❤️ by <b>yahiaal</b> with the help of <b>AI</b>.
+  Built with ❤️ by <b><a href="https://www.linkedin.com/in/yahia-z/">Yahia Almarafi</a></b> with the help of <b>AI</b>.
 </p>
