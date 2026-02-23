@@ -8,7 +8,7 @@ export function SpeedSelector({ speed, onChange }) {
   return (
     <div style={{ position: 'relative' }}>
       <button
-        className="btn btn-ghost btn-sm"
+        className="btn btn-primary btn-sm"
         onClick={() => setOpen((o) => !o)}
         style={{ minWidth: '3.5rem', fontSize: '0.8rem', fontWeight: 700 }}
         title="Playback speed"
