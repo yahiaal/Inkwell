@@ -1,4 +1,4 @@
-const CACHE_NAME = 'course-player-v1';
+const CACHE_NAME = 'inkwell-v1';
 
 // Files to cache for offline app shell
 const APP_SHELL = [

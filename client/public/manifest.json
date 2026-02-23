@@ -1,6 +1,6 @@
 {
-  "name": "Course Player",
-  "short_name": "CoursePlayer",
+  "name": "Inkwell",
+  "short_name": "Inkwell",
   "description": "Your personal local Learning Management System — watch, track, and manage video courses from your own folders.",
   "start_url": "/",
   "scope": "/",

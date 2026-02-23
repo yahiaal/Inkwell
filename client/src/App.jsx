@@ -86,7 +86,7 @@ function NavBar() {
       >
         <img
           src="/logo.png"
-          alt="Course Player"
+          alt="Inkwell"
           style={{
             width: '36px',
             height: '36px',
@@ -100,7 +100,7 @@ function NavBar() {
           className="font-display"
           style={{ fontSize: '1.2rem', color: 'var(--accent)', letterSpacing: '-0.02em' }}
         >
-          Course Player
+          Inkwell
         </span>
       </NavLink>
 
