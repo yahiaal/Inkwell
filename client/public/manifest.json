@@ -1,0 +1,54 @@
+{
+  "name": "Course Player",
+  "short_name": "CoursePlayer",
+  "description": "Your personal local Learning Management System — watch, track, and manage video courses from your own folders.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#1b1f3b",
+  "theme_color": "#f5a623",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/favicon-16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/favicon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "My Library",
+      "url": "/",
+      "description": "View your course library"
+    },
+    {
+      "name": "Stats",
+      "url": "/stats",
+      "description": "View your learning statistics"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "inkwell-lms",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "predev": "node -e \"require('fs').mkdirSync('data', { recursive: true })\"",
+    "dev": "concurrently --kill-others --names \"SERVER,CLIENT\" --prefix-colors \"cyan,magenta\" \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "install:all": "npm install && npm install --prefix server && npm install --prefix client"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
