@@ -13,6 +13,31 @@ const useCourseStore = create((set) => ({
     }),
 
   clearCourse: () => set({ course: null, lessons: [], tree: null }),
+
+  setLessonSubtitlePath: (lessonId, path) =>
+    set((state) => {
+      if (!state.course) return state;
+
+      const updateLessons = (lessons) =>
+        lessons?.map((l) =>
+          String(l.id) === String(lessonId) ? { ...l, subtitle_path: path } : l
+        );
+
+      const updateTree = (node) => {
+        if (!node) return node;
+        return {
+          ...node,
+          lessons: updateLessons(node.lessons),
+          sections: node.sections?.map(updateTree),
+        };
+      };
+
+      return {
+        lessons: updateLessons(state.lessons),
+        course: { ...state.course, lessons: updateLessons(state.course.lessons), tree: updateTree(state.course.tree) },
+        tree: updateTree(state.tree),
+      };
+    }),
 }));
 
 export default useCourseStore;

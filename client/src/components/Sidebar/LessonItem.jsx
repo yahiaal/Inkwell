@@ -1,16 +1,38 @@
 import { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { formatTime } from '../../utils/formatters.js';
 import useProgressStore from '../../store/useProgressStore.js';
+import useUIStore from '../../store/useUIStore.js';
+import { api } from '../../utils/api.js';
 
 export const LessonItem = memo(function LessonItem({ lesson, courseId, activeLessonId }) {
   const navigate = useNavigate();
   const progress = useProgressStore((s) => s.progressMap[lesson.id]);
+  const subtitleQueue = useUIStore((s) => s.subtitleQueue);
+  const openModal = useUIStore((s) => s.openModal);
+  const refreshSubtitleQueue = useUIStore((s) => s.refreshSubtitleQueue);
   const isActive = lesson.id === activeLessonId;
   const isCompleted = progress?.completed;
 
+  // Derive subtitle job status from shared queue state
+  const isProcessing = subtitleQueue.processing?.lessonId === lesson.id;
+  const isQueued = subtitleQueue.queued.some((j) => j.lessonId === lesson.id);
+  const hasActiveJob = isProcessing || isQueued;
+
   const handleClick = () => {
     navigate(`/course/${courseId}/play/${lesson.id}`);
+  };
+
+  const handleGenerateSubtitle = async (e) => {
+    e.stopPropagation(); // prevent navigating to the lesson
+    try {
+      await api.subtitles.generate([lesson.id]);
+      await refreshSubtitleQueue(); // Instantly update UI state to show spinner
+      openModal('subtitle-queue'); // Open the queue panel immediately
+    } catch (err) {
+      console.error('Network error triggering subtitle generation:', err);
+    }
   };
 
   return (
@@ -69,6 +91,70 @@ export const LessonItem = memo(function LessonItem({ lesson, courseId, activeLes
           </span>
         )}
       </span>
+
+      {/* Subtitle badge */}
+      {lesson.subtitle_path ? (
+        <span
+          style={{
+            fontSize: '0.6rem',
+            fontWeight: 700,
+            padding: '0.05rem 0.25rem',
+            borderRadius: '3px',
+            backgroundColor: 'var(--success)',
+            color: 'white',
+            border: '1px solid var(--ink)',
+            flexShrink: 0,
+            lineHeight: 1.3,
+          }}
+        >
+          CC
+        </span>
+      ) : hasActiveJob ? (
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '16px',
+            height: '16px',
+            borderRadius: '50%',
+            border: '2px solid var(--accent)',
+            borderTopColor: 'transparent',
+            flexShrink: 0,
+          }}
+          title="Generating subtitles..."
+        />
+      ) : lesson.file_path ? (
+        <button
+          onClick={handleGenerateSubtitle}
+          title="Generate Subtitles"
+          style={{
+            fontSize: '0.6rem',
+            fontWeight: 700,
+            padding: '0.1rem 0.3rem',
+            borderRadius: '4px',
+            backgroundColor: 'transparent',
+            color: 'var(--text-muted)',
+            border: '1px solid var(--ink)',
+            cursor: 'pointer',
+            flexShrink: 0,
+            lineHeight: 1.3,
+            transition: 'background 0.2s',
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
+            e.currentTarget.style.color = 'var(--text)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = 'var(--text-muted)';
+          }}
+        >
+          + CC
+        </button>
+      ) : null}
 
       {/* Duration */}
       {lesson.duration_seconds && (

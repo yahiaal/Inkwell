@@ -87,6 +87,17 @@ db.exec(`
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS subtitle_jobs (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    lesson_id     INTEGER NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+    status        TEXT NOT NULL DEFAULT 'queued',
+    created_at    TEXT NOT NULL,
+    started_at    TEXT,
+    finished_at   TEXT,
+    error_message TEXT,
+    output_path   TEXT
+  );
 `);
 
 // Seed default settings (INSERT OR IGNORE so existing values are preserved)

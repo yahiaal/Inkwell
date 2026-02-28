@@ -26,13 +26,17 @@
 /* ─────────────────────────────────────────────
    Base Resets & App Background
 ───────────────────────────────────────────── */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   min-height: 100vh;
 }
@@ -48,7 +52,10 @@ body {
 /* ─────────────────────────────────────────────
    Typography
 ───────────────────────────────────────────── */
-h1, h2, h3, .font-display {
+h1,
+h2,
+h3,
+.font-display {
   font-family: 'Baloo 2', cursive;
   font-weight: 700;
 }
@@ -241,17 +248,40 @@ h1, h2, h3, .font-display {
   font-family: 'Nunito', sans-serif;
 }
 
-.badge-accent   { background-color: var(--accent);     color: var(--ink); }
-.badge-success  { background-color: var(--success);    color: white; }
-.badge-muted    { background-color: var(--surface-alt); color: var(--text-muted); }
-.badge-coral    { background-color: var(--secondary);  color: white; }
+.badge-accent {
+  background-color: var(--accent);
+  color: var(--ink);
+}
+
+.badge-success {
+  background-color: var(--success);
+  color: white;
+}
+
+.badge-muted {
+  background-color: var(--surface-alt);
+  color: var(--text-muted);
+}
+
+.badge-coral {
+  background-color: var(--secondary);
+  color: white;
+}
 
 /* ─────────────────────────────────────────────
    Sidebar Section Headers
 ───────────────────────────────────────────── */
-.sidebar-section-0 { background-color: var(--depth-0); }
-.sidebar-section-1 { background-color: var(--depth-1); }
-.sidebar-section-2 { background-color: var(--depth-2); }
+.sidebar-section-0 {
+  background-color: var(--depth-0);
+}
+
+.sidebar-section-1 {
+  background-color: var(--depth-1);
+}
+
+.sidebar-section-2 {
+  background-color: var(--depth-2);
+}
 
 /* ─────────────────────────────────────────────
    Utility
@@ -268,4 +298,29 @@ h1, h2, h3, .font-display {
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* ─────────────────────────────────────────────
+   Animations
+───────────────────────────────────────────── */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
 }

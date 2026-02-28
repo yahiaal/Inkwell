@@ -40,3 +40,14 @@ server/logs/
 *.swp
 .DS_Store
 Thumbs.db
+
+# Whisper.cpp binaries & models (large files)
+server/whisper/bin/
+server/whisper/models/
+
+# Local User Auto-Startup Scripts
+start-inkwell.bat
+start-inkwell.vbs
+ecosystem.config.cjs
+client/ecosystem.config.cjs
+client/start-inkwell.vbs

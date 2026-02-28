@@ -1,9 +1,20 @@
-const BASE_URL = import.meta.env.VITE_API_URL;
+const envUrl = import.meta.env.VITE_API_URL;
+const BASE_URL = (() => {
+  if (!envUrl) return `http://${window.location.hostname}:3001`;
+  if (envUrl.includes('localhost') && window.location.hostname !== 'localhost') {
+    return envUrl.replace('localhost', window.location.hostname);
+  }
+  return envUrl;
+})();
 
 async function request(path, options = {}) {
+  const headers = { ...options.headers };
+  if (options.body) {
+    headers['Content-Type'] = 'application/json';
+  }
   const res = await fetch(`${BASE_URL}/api${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
     ...options,
+    headers,
   });
 
   if (!res.ok) {
@@ -66,6 +77,8 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+
+    getResume: (courseId) => request(`/progress/${courseId}/resume`),
   },
 
   // ─── Bookmarks ──────────────────────────────────────────────
@@ -118,6 +131,27 @@ export const api = {
   browse: {
     pickFolder: () =>
       fetch(`${BASE_URL}/api/browse-folder`).then((r) => r.json()),
+  },
+
+  // ─── Subtitles ──────────────────────────────────────────────
+  subtitles: {
+    generate: (lessonIds) =>
+      request('/subtitles/generate', {
+        method: 'POST',
+        body: JSON.stringify({ lessonIds }),
+      }),
+
+    getQueue: () => request('/subtitles/queue'),
+
+    cancelJob: (jobId) =>
+      request(`/subtitles/queue/${jobId}`, { method: 'DELETE' }),
+
+    clearHistory: () =>
+      request('/subtitles/history', { method: 'DELETE' }),
+
+    getMissing: (courseId) => request(`/subtitles/missing/${courseId}`),
+
+    check: () => request('/subtitles/check'),
   },
 
   // ─── Media URLs (not fetched, used as src attributes) ───────

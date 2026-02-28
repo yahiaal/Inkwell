@@ -1,8 +1,10 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { api } from '../../utils/api.js';
 import { todayDate } from '../../utils/formatters.js';
 import usePlayerStore from '../../store/usePlayerStore.js';
 import useProgressStore from '../../store/useProgressStore.js';
+import useUIStore from '../../store/useUIStore.js';
+import useCourseStore from '../../store/useCourseStore.js';
 import { PlayerControls } from './PlayerControls.jsx';
 
 const SAVE_INTERVAL_MS = 5000;
@@ -30,8 +32,106 @@ export function VideoPlayer({ lesson, courseId, completionThreshold, onNext, onP
   } = usePlayerStore();
 
   const { progressMap, setProgress, markComplete } = useProgressStore();
+  const subtitleQueue = useUIStore((s) => s.subtitleQueue);
+  const refreshSubtitleQueue = useUIStore((s) => s.refreshSubtitleQueue);
+  const addToast = useUIStore((s) => s.addToast);
+  const setCourse = useCourseStore((s) => s.setCourse);
   const lessonProgress = progressMap[lesson?.id];
   const threshold = parseFloat(completionThreshold ?? 85) / 100;
+
+  // Derive full subtitle job status for this lesson from shared queue state
+  const subtitleStatus = useMemo(() => {
+    if (!lesson) return { state: 'idle' };
+
+    // Check if currently processing
+    if (subtitleQueue.processing?.lessonId === lesson.id) {
+      return {
+        state: 'processing',
+        jobId: subtitleQueue.processing.jobId,
+        startedAt: subtitleQueue.processing.startedAt,
+      };
+    }
+
+    // Check if queued
+    const queuedJob = subtitleQueue.queued.find((j) => j.lessonId === lesson.id);
+    if (queuedJob) {
+      return {
+        state: 'queued',
+        jobId: queuedJob.jobId,
+        position: queuedJob.position,
+      };
+    }
+
+    // Check recently completed
+    const recentJob = subtitleQueue.recentlyCompleted.find((j) => j.lessonId === lesson.id);
+    if (recentJob) {
+      if (recentJob.status === 'failed') {
+        return {
+          state: 'failed',
+          jobId: recentJob.jobId,
+          error: recentJob.errorMessage || 'Generation failed',
+        };
+      }
+      if (recentJob.status === 'cancelled') {
+        return { state: 'cancelled' };
+      }
+      // done
+      return { state: 'done' };
+    }
+
+    return { state: 'idle' };
+  }, [lesson, subtitleQueue]);
+
+  // ─── Auto-refresh when subtitle generation completes ─────────
+  useEffect(() => {
+    if (!lesson || !courseId) return;
+    const done = subtitleQueue.recentlyCompleted.find(
+      (j) => j.lessonId === lesson.id && j.status === 'done'
+    );
+    if (done && !lesson.subtitle_path) {
+      api.courses.get(courseId).then((courseData) => {
+        setCourse(courseData);
+      }).catch(() => { });
+    }
+  }, [subtitleQueue.recentlyCompleted, lesson, courseId, setCourse]);
+
+  // ─── Generate subtitle handler ────────────────────────────────
+  const handleGenerateSubtitle = useCallback(async () => {
+    if (!lesson) return;
+    try {
+      const result = await api.subtitles.generate([lesson.id]);
+      if (result.queued?.length > 0) {
+        addToast('Subtitle generation started', 'success');
+      } else if (result.skipped?.length > 0) {
+        addToast('Lesson already has subtitles or is already queued', 'info');
+      }
+      await refreshSubtitleQueue();
+    } catch (err) {
+      addToast('Failed to start subtitle generation: ' + err.message);
+    }
+  }, [lesson, addToast, refreshSubtitleQueue]);
+
+  // ─── Stop/cancel subtitle generation handler ──────────────────
+  const handleStopGenerating = useCallback(async () => {
+    if (!lesson) return;
+    try {
+      const processingJob = subtitleQueue.processing;
+      if (processingJob && processingJob.lessonId === lesson.id) {
+        await api.subtitles.cancelJob(processingJob.jobId);
+        addToast('Subtitle generation stopped', 'success');
+        await refreshSubtitleQueue();
+        return;
+      }
+      const queuedJob = subtitleQueue.queued.find((j) => j.lessonId === lesson.id);
+      if (queuedJob) {
+        await api.subtitles.cancelJob(queuedJob.jobId);
+        addToast('Subtitle generation cancelled', 'success');
+        await refreshSubtitleQueue();
+      }
+    } catch (err) {
+      addToast('Failed to cancel: ' + err.message);
+    }
+  }, [lesson, subtitleQueue, addToast, refreshSubtitleQueue]);
 
   // ─── Track fullscreen state ───────────────────────────────────
   useEffect(() => {
@@ -132,7 +232,7 @@ export function VideoPlayer({ lesson, courseId, completionThreshold, onNext, onP
     setDuration(dur);
 
     if (lesson && courseId && !lesson.duration_seconds) {
-      try { await api.courses.updateLessonDuration(courseId, lesson.id, dur); } catch {}
+      try { await api.courses.updateLessonDuration(courseId, lesson.id, dur); } catch { }
     }
 
     const savedSeconds = lessonProgress?.watchedSeconds;
@@ -140,7 +240,7 @@ export function VideoPlayer({ lesson, courseId, completionThreshold, onNext, onP
       video.currentTime = savedSeconds;
     }
 
-    video.play().catch(() => {});
+    video.play().catch(() => { });
   }, [lesson, courseId, lessonProgress, setDuration]);
 
   const handleTimeUpdate = () => {
@@ -228,39 +328,39 @@ export function VideoPlayer({ lesson, courseId, completionThreshold, onNext, onP
 
   const containerStyle = isFullscreen
     ? {
-        position: 'relative',
-        backgroundColor: '#000',
-        width: '100%',
-        height: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-      }
+      position: 'relative',
+      backgroundColor: '#000',
+      width: '100%',
+      height: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+    }
     : {
-        position: 'relative',
-        backgroundColor: '#000',
-        width: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-      };
+      position: 'relative',
+      backgroundColor: '#000',
+      width: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+    };
 
   const videoStyle = isFullscreen
     ? {
-        flex: 1,
-        width: '100%',
-        backgroundColor: '#000',
-        display: 'block',
-        objectFit: 'contain',
-        cursor: 'pointer',
-        minHeight: 0,
-      }
+      flex: 1,
+      width: '100%',
+      backgroundColor: '#000',
+      display: 'block',
+      objectFit: 'contain',
+      cursor: 'pointer',
+      minHeight: 0,
+    }
     : {
-        width: '100%',
-        maxHeight: '44vh',
-        backgroundColor: '#000',
-        display: 'block',
-        objectFit: 'contain',
-        cursor: 'pointer',
-      };
+      width: '100%',
+      maxHeight: '44vh',
+      backgroundColor: '#000',
+      display: 'block',
+      objectFit: 'contain',
+      cursor: 'pointer',
+    };
 
   return (
     <div
@@ -333,6 +433,9 @@ export function VideoPlayer({ lesson, courseId, completionThreshold, onNext, onP
               onFullscreen={handleFullscreen}
               onPrev={onPrev}
               onNext={onNext}
+              onGenerateSubtitle={handleGenerateSubtitle}
+              onStopGenerating={handleStopGenerating}
+              subtitleStatus={subtitleStatus}
             />
           </div>
         </>

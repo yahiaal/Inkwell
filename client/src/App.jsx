@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ToastContainer } from './components/UI/Toast.jsx';
+import { SubtitleQueuePanel } from './components/Subtitles/SubtitleQueuePanel.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import CourseDetail from './pages/CourseDetail.jsx';
 import CoursePlayer from './pages/CoursePlayer.jsx';
@@ -127,6 +128,7 @@ export default function App() {
         <NavBar />
         <AnimatedRoutes />
         <ToastContainer />
+        <SubtitleQueuePanel />
       </div>
     </BrowserRouter>
   );

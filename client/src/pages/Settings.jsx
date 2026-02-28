@@ -55,6 +55,35 @@ function Toggle({ checked, onChange }) {
   );
 }
 
+function WhisperStatus() {
+  const [status, setStatus] = useState(null);
+
+  useEffect(() => {
+    api.subtitles.check()
+      .then((data) => setStatus(data))
+      .catch(() => setStatus({ available: false, reason: 'Could not reach server' }));
+  }, []);
+
+  if (!status) {
+    return <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Checking Whisper availability...</p>;
+  }
+
+  return status.available ? (
+    <p style={{ fontSize: '0.85rem', color: 'var(--success)', fontWeight: 600 }}>
+      ✅ Whisper is ready
+    </p>
+  ) : (
+    <div>
+      <p style={{ fontSize: '0.85rem', color: 'var(--secondary)', fontWeight: 600, marginBottom: '0.4rem' }}>
+        ❌ Whisper not found
+      </p>
+      <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+        Run: <code style={{ backgroundColor: 'var(--surface-alt)', padding: '0.15rem 0.4rem', borderRadius: '4px', border: '1px solid var(--ink)', fontFamily: 'monospace', fontSize: '0.76rem' }}>pip install faster-whisper</code>
+      </p>
+    </div>
+  );
+}
+
 export default function Settings() {
   const [settings, setSettings] = useState({});
   const [loading, setLoading] = useState(true);
@@ -205,6 +234,23 @@ export default function Settings() {
             ))}
           </tbody>
         </table>
+      </motion.div>
+
+      {/* AI Subtitle Generation */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="card-flat"
+        style={{ backgroundColor: 'var(--surface)', padding: '1.5rem', marginBottom: '2rem' }}
+      >
+        <h2 className="font-display" style={{ fontSize: '1.2rem', color: 'var(--text)', marginBottom: '0.5rem' }}>
+          AI Subtitle Generation
+        </h2>
+        <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '1rem', lineHeight: 1.5 }}>
+          Generate subtitles for lessons that don't have them. Uses Whisper (small model) running locally on your machine. Processing happens one video at a time in the background.
+        </p>
+        <WhisperStatus />
       </motion.div>
 
       {/* Danger Zone */}

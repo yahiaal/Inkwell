@@ -104,4 +104,39 @@ router.post('/log-session', (req, res) => {
   res.json({ ok: true });
 });
 
+// GET /api/progress/:courseId/resume — which lesson to resume from
+router.get('/:courseId/resume', (req, res) => {
+  const courseId = req.params.courseId;
+
+  // Get all lessons for this course, ordered by sort_order
+  const lessons = db
+    .prepare('SELECT id, sort_order FROM lessons WHERE course_id = ? ORDER BY sort_order')
+    .all(courseId);
+
+  if (lessons.length === 0) {
+    return res.json({ lessonId: null });
+  }
+
+  // Get all progress for this course
+  const progressRows = db
+    .prepare('SELECT lesson_id, completed, watched_seconds, last_watched FROM progress WHERE course_id = ?')
+    .all(courseId);
+
+  const progressMap = {};
+  for (const row of progressRows) {
+    progressMap[row.lesson_id] = row;
+  }
+
+  // Find the first incomplete lesson (by sort_order)
+  for (const lesson of lessons) {
+    const prog = progressMap[lesson.id];
+    if (!prog || !prog.completed) {
+      return res.json({ lessonId: lesson.id });
+    }
+  }
+
+  // All lessons are completed — return the first lesson
+  return res.json({ lessonId: lessons[0].id });
+});
+
 export default router;

@@ -33,9 +33,9 @@ function naturalCompare(a, b) {
  * "003_my_lesson.mp4" → "My lesson"
  * "Section.02.React.Basics" → "React Basics"
  */
-function cleanTitle(name) {
-  // Remove file extension
-  let title = name.replace(/\.[^/.]+$/, '');
+function cleanTitle(name, isDirectory = false) {
+  // Remove file extension (skip for directories — they have no extension)
+  let title = isDirectory ? name : name.replace(/\.[^/.]+$/, '');
 
   // Strip leading numeric prefixes (digits followed by separators)
   title = title.replace(/^[\d]+[\s._\-–—]+/, '');
@@ -158,11 +158,11 @@ function scanDirectory(dirPath, sectionPath, depth, flatLessons) {
   const sections = [];
   for (const dirName of dirs) {
     const childPath = path.join(dirPath, dirName);
-    const childSectionPath = sectionPath ? `${sectionPath}/${cleanTitle(dirName)}` : cleanTitle(dirName);
+    const childSectionPath = sectionPath ? `${sectionPath}/${cleanTitle(dirName, true)}` : cleanTitle(dirName, true);
     const subtree = scanDirectory(childPath, childSectionPath, depth + 1, flatLessons);
     if (subtree && (subtree.lessons.length > 0 || subtree.sections.length > 0)) {
       sections.push({
-        name: cleanTitle(dirName),
+        name: cleanTitle(dirName, true),
         path: childSectionPath,
         depth: depth + 1,
         lessons: subtree.lessons,

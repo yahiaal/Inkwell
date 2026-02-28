@@ -16,6 +16,20 @@ const iconBtn = {
   fontSize: '1.1rem',
 };
 
+const ccBtn = (extra = {}) => ({
+  ...iconBtn,
+  fontSize: '0.7rem',
+  fontWeight: 600,
+  padding: '0.15rem 0.45rem',
+  borderRadius: '4px',
+  cursor: 'pointer',
+  gap: '0.25rem',
+  display: 'flex',
+  alignItems: 'center',
+  whiteSpace: 'nowrap',
+  ...extra,
+});
+
 export function PlayerControls({
   isPlaying,
   currentTime,
@@ -34,7 +48,102 @@ export function PlayerControls({
   onFullscreen,
   onPrev,
   onNext,
+  onGenerateSubtitle,
+  onStopGenerating,
+  subtitleStatus = { state: 'idle' },
 }) {
+
+  const renderCC = () => {
+    // 1. Has subtitle → CC toggle
+    if (hasSubtitle) {
+      return (
+        <button
+          style={ccBtn({
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            border: subtitlesEnabled ? '1.5px solid var(--accent)' : '1.5px solid rgba(255,255,255,0.3)',
+            color: subtitlesEnabled ? 'var(--accent)' : 'rgba(255,255,255,0.6)',
+          })}
+          onClick={onToggleSubtitles}
+          title="Toggle subtitles"
+        >
+          CC
+        </button>
+      );
+    }
+
+    switch (subtitleStatus.state) {
+      case 'processing':
+        return (
+          <button
+            style={ccBtn({
+              border: '1.5px solid var(--accent)',
+              color: 'var(--accent)',
+            })}
+            onClick={onStopGenerating}
+            title="Click to stop generating"
+          >
+            <span
+              style={{
+                display: 'inline-block',
+                width: '10px',
+                height: '10px',
+                border: '2px solid var(--accent)',
+                borderTopColor: 'transparent',
+                borderRadius: '50%',
+                animation: 'spin 0.8s linear infinite',
+                flexShrink: 0,
+              }}
+            />
+            Generating...
+          </button>
+        );
+
+      case 'queued':
+        return (
+          <button
+            style={ccBtn({
+              border: '1.5px solid rgba(255,255,255,0.35)',
+              color: 'rgba(255,255,255,0.5)',
+            })}
+            onClick={onStopGenerating}
+            title="Click to cancel"
+          >
+            🕐 Queue #{subtitleStatus.position ?? ''}
+          </button>
+        );
+
+      case 'failed':
+        return (
+          <button
+            style={ccBtn({
+              border: '1.5px solid var(--secondary)',
+              color: 'var(--secondary)',
+            })}
+            onClick={onGenerateSubtitle}
+            title={`Failed: ${subtitleStatus.error}\nClick to retry`}
+          >
+            ⚠ Retry CC
+          </button>
+        );
+
+      default:
+        // idle / cancelled → generate
+        return (
+          <button
+            style={ccBtn({
+              border: '1.5px solid rgba(255,255,255,0.3)',
+              color: 'var(--text-muted)',
+            })}
+            onClick={onGenerateSubtitle}
+            title="Generate subtitles with AI"
+          >
+            ✨ CC
+          </button>
+        );
+    }
+  };
+
   return (
     <div
       style={{
@@ -100,24 +209,8 @@ export function PlayerControls({
         {/* Speed */}
         <SpeedSelector speed={speed} onChange={onSpeed} />
 
-        {/* CC */}
-        {hasSubtitle && (
-          <button
-            style={{
-              ...iconBtn,
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              padding: '0.2rem 0.4rem',
-              border: subtitlesEnabled ? '1.5px solid var(--accent)' : '1.5px solid rgba(255,255,255,0.3)',
-              borderRadius: '4px',
-              color: subtitlesEnabled ? 'var(--accent)' : 'rgba(255,255,255,0.6)',
-            }}
-            onClick={onToggleSubtitles}
-            title="Toggle subtitles"
-          >
-            CC
-          </button>
-        )}
+        {/* CC — full status */}
+        {renderCC()}
 
         {/* Fullscreen */}
         <button style={iconBtn} onClick={onFullscreen} title="Fullscreen (F)">⛶</button>

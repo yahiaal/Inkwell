@@ -40,6 +40,7 @@ export default function CourseDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const addToast = useUIStore((s) => s.addToast);
+  const refreshSubtitleQueue = useUIStore((s) => s.refreshSubtitleQueue);
 
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -49,17 +50,24 @@ export default function CourseDetail() {
   const [newTag, setNewTag] = useState('');
   const [review, setReview] = useState('');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [resumeLessonId, setResumeLessonId] = useState(null);
+
+  // Subtitle state
+  const [missingSubtitles, setMissingSubtitles] = useState(null);
+  const [generatingAll, setGeneratingAll] = useState(false);
 
   const fetchCourse = useCallback(async () => {
     try {
-      const [data, bmarks] = await Promise.all([
+      const [data, bmarks, resumeData] = await Promise.all([
         api.courses.get(id),
         api.bookmarks.getByCourse(id),
+        api.progress.getResume(id),
       ]);
       setCourse(data);
       setEditTitle(data.title);
       setReview(data.personal_review ?? '');
       setBookmarks(bmarks);
+      setResumeLessonId(resumeData?.lessonId ?? data.lessons?.[0]?.id ?? null);
     } catch (err) {
       addToast('Failed to load course: ' + err.message);
     } finally {
@@ -68,6 +76,13 @@ export default function CourseDetail() {
   }, [id, addToast]);
 
   useEffect(() => { fetchCourse(); }, [fetchCourse]);
+
+  // Fetch missing subtitles
+  useEffect(() => {
+    api.subtitles.getMissing(id)
+      .then((data) => setMissingSubtitles(data))
+      .catch(() => { });
+  }, [id]);
 
   const updateCourse = async (updates) => {
     try {
@@ -114,13 +129,24 @@ export default function CourseDetail() {
     }
   };
 
-  const getResumeLesson = () => {
-    if (!course?.lessons?.length) return null;
-    const firstIncomplete = course.lessons.find((l) => {
-      return true; // Just navigate to first lesson for simplicity; progress store not loaded here
-    });
-    return course.lessons[0];
+  const handleGenerateAllSubtitles = async () => {
+    if (!missingSubtitles || missingSubtitles.lessons.length === 0) return;
+    setGeneratingAll(true);
+    try {
+      const result = await api.subtitles.generate(missingSubtitles.lessons.map((l) => l.lessonId));
+      if (result.queued?.length > 0) {
+        addToast(`${result.queued.length} lesson${result.queued.length !== 1 ? 's' : ''} added to subtitle queue`, 'success');
+      } else {
+        addToast('All lessons already have subtitles or are already queued', 'info');
+      }
+      await refreshSubtitleQueue();
+    } catch (err) {
+      addToast('Failed to queue subtitles: ' + err.message);
+      setGeneratingAll(false);
+    }
   };
+
+  const targetLessonId = resumeLessonId || course?.lessons?.[0]?.id;
 
   if (loading) {
     return (
@@ -139,7 +165,7 @@ export default function CourseDetail() {
     );
   }
 
-  const firstLesson = course.lessons?.[0];
+  // targetLessonId is set above from the resume endpoint
 
   return (
     <div style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
@@ -244,10 +270,10 @@ export default function CourseDetail() {
 
         {/* Action buttons */}
         <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
-          {firstLesson && (
+          {targetLessonId && (
             <Button
               variant="primary"
-              onClick={() => navigate(`/course/${id}/play/${firstLesson.id}`)}
+              onClick={() => navigate(`/course/${id}/play/${targetLessonId}`)}
             >
               {course.status === 'not_started' ? '▶ Start Course' : '▶ Resume Course'}
             </Button>
@@ -279,6 +305,72 @@ export default function CourseDetail() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Subtitles section */}
+        {missingSubtitles && (
+          <div
+            className="card-flat"
+            style={{
+              padding: '1.25rem',
+              marginBottom: '2rem',
+              backgroundColor: 'var(--surface-alt)',
+            }}
+          >
+            <h2
+              className="font-display"
+              style={{ fontSize: '1.1rem', marginBottom: '0.75rem', color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              🎙 Subtitles
+            </h2>
+            {missingSubtitles.missingCount === 0 ? (
+              <p style={{ fontSize: '0.875rem', color: 'var(--success)', fontWeight: 600 }}>
+                ✅ All lessons have subtitles
+              </p>
+            ) : (
+              <>
+                {/* Subtitle coverage progress bar */}
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.3rem' }}>
+                    <span>Subtitle coverage</span>
+                    <span style={{ fontWeight: 700, color: 'var(--text)' }}>
+                      {(course?.total_lessons ?? 0) - missingSubtitles.missingCount} / {course?.total_lessons ?? 0}
+                    </span>
+                  </div>
+                  <div style={{ height: '10px', borderRadius: '999px', border: '2px solid var(--ink)', backgroundColor: 'var(--surface)', overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        height: '100%',
+                        width: `${course?.total_lessons ? (((course.total_lessons - missingSubtitles.missingCount) / course.total_lessons) * 100) : 0}%`,
+                        backgroundColor: 'var(--accent)',
+                        borderRadius: '999px',
+                        transition: 'width 600ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+                      }}
+                    />
+                  </div>
+                </div>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
+                  {missingSubtitles.missingCount} lesson{missingSubtitles.missingCount !== 1 ? 's are' : ' is'} missing subtitles
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '1rem', maxHeight: '150px', overflowY: 'auto' }}>
+                  {missingSubtitles.lessons.map((l) => (
+                    <div key={l.lessonId} style={{ fontSize: '0.8rem', color: 'var(--text)', padding: '0.2rem 0.5rem' }}>
+                      <span style={{ color: 'var(--text-muted)', marginRight: '0.5rem' }}>{l.sectionPath || '—'} ›</span>
+                      {l.lessonTitle}
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleGenerateAllSubtitles}
+                  disabled={generatingAll}
+                >
+                  {generatingAll ? 'Added to Queue ✓' : '✨ Generate All Missing Subtitles'}
+                </Button>
+              </>
+            )}
           </div>
         )}
       </motion.div>
