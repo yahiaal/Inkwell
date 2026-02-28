@@ -9,7 +9,7 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "better-sqlite3": "^11.3.0",
+    "better-sqlite3": "^12.6.2",
     "cors": "^2.8.5",
     "inkwell-lms": "file:..",
     "dotenv": "^16.4.5",
