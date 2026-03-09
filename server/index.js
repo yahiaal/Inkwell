@@ -47,6 +47,11 @@ app.use("/api/subtitle", subtitleRouter);
 app.use("/api/subtitles", subtitlesRouter);
 app.use("/api/browse-folder", browseRouter);
 
+// Root route for health check
+app.get("/", (req, res) => {
+  res.json({ message: "Inkwell LMS Server is running", version: "1.0.0" });
+});
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`LMS server running at http://localhost:${PORT}`);
 });
