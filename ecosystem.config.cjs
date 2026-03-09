@@ -2,8 +2,8 @@ module.exports = {
     apps: [
         {
             name: "inkwell-server",
-            script: "node",
-            args: "index.js",
+            script: "npm",
+            args: "run start",
             cwd: "./server",
             watch: false,
             env: {
@@ -14,8 +14,8 @@ module.exports = {
         },
         {
             name: "inkwell-client",
-            script: "npx",
-            args: "serve -s dist -l 4173",
+            script: "npm",
+            args: "run dev",
             cwd: "./client",
             watch: false,
             env: {
