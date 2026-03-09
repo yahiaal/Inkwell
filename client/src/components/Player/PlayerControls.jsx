@@ -54,22 +54,38 @@ export function PlayerControls({
 }) {
 
   const renderCC = () => {
-    // 1. Has subtitle → CC toggle
+    // 1. Has subtitle → CC toggle + Regenerate
     if (hasSubtitle) {
-      return (
-        <button
-          style={ccBtn({
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            border: subtitlesEnabled ? '1.5px solid var(--accent)' : '1.5px solid rgba(255,255,255,0.3)',
-            color: subtitlesEnabled ? 'var(--accent)' : 'rgba(255,255,255,0.6)',
-          })}
-          onClick={onToggleSubtitles}
-          title="Toggle subtitles"
-        >
-          CC
-        </button>
-      );
+      if (subtitleStatus.state === 'processing' || subtitleStatus.state === 'queued') {
+        // Fallthrough to the generating states below
+      } else {
+        return (
+          <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+            <button
+              style={ccBtn({
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                border: subtitlesEnabled ? '1.5px solid var(--accent)' : '1.5px solid rgba(255,255,255,0.3)',
+                color: subtitlesEnabled ? 'var(--accent)' : 'rgba(255,255,255,0.6)',
+              })}
+              onClick={onToggleSubtitles}
+              title="Toggle subtitles"
+            >
+              CC
+            </button>
+            <button
+              style={ccBtn({
+                border: '1.5px solid rgba(255,255,255,0.2)',
+                color: 'rgba(255,255,255,0.5)',
+              })}
+              onClick={() => onGenerateSubtitle(true)}
+              title="Regenerate Subtitles"
+            >
+              🔄
+            </button>
+          </div>
+        );
+      }
     }
 
     switch (subtitleStatus.state) {
@@ -120,7 +136,7 @@ export function PlayerControls({
               border: '1.5px solid var(--secondary)',
               color: 'var(--secondary)',
             })}
-            onClick={onGenerateSubtitle}
+            onClick={() => onGenerateSubtitle(hasSubtitle)}
             title={`Failed: ${subtitleStatus.error}\nClick to retry`}
           >
             ⚠ Retry CC
@@ -135,7 +151,7 @@ export function PlayerControls({
               border: '1.5px solid rgba(255,255,255,0.3)',
               color: 'var(--text-muted)',
             })}
-            onClick={onGenerateSubtitle}
+            onClick={() => onGenerateSubtitle(false)}
             title="Generate subtitles with AI"
           >
             ✨ CC

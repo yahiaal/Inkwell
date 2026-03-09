@@ -16,6 +16,7 @@ export function VideoPlayer({ lesson, courseId, completionThreshold, onNext, onP
   const sessionStartRef = useRef(Date.now());
   const lastLoggedMinuteRef = useRef(0);
   const hideControlsTimer = useRef(null);
+  const hasSeekedRef = useRef(false);
 
   const [videoError, setVideoError] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -96,12 +97,12 @@ export function VideoPlayer({ lesson, courseId, completionThreshold, onNext, onP
   }, [subtitleQueue.recentlyCompleted, lesson, courseId, setCourse]);
 
   // ─── Generate subtitle handler ────────────────────────────────
-  const handleGenerateSubtitle = useCallback(async () => {
+  const handleGenerateSubtitle = useCallback(async (force = false) => {
     if (!lesson) return;
     try {
-      const result = await api.subtitles.generate([lesson.id]);
+      const result = await api.subtitles.generate([lesson.id], force);
       if (result.queued?.length > 0) {
-        addToast('Subtitle generation started', 'success');
+        addToast(force ? 'Regeneration started' : 'Subtitle generation started', 'success');
       } else if (result.skipped?.length > 0) {
         addToast('Lesson already has subtitles or is already queued', 'info');
       }
@@ -197,6 +198,7 @@ export function VideoPlayer({ lesson, courseId, completionThreshold, onNext, onP
   useEffect(() => {
     if (!lesson) return;
     setVideoError(null);
+    hasSeekedRef.current = false; // Reset seek state for new lesson
     const video = videoRef.current;
     if (!video) return;
     video.pause();
@@ -204,6 +206,23 @@ export function VideoPlayer({ lesson, courseId, completionThreshold, onNext, onP
     sessionStartRef.current = Date.now();
     lastLoggedMinuteRef.current = 0;
   }, [lesson?.id]);
+
+  // ─── Apply saved progress when available ──────────────────────
+  useEffect(() => {
+    const video = videoRef.current;
+    // Backend returns watched_seconds (snake_case), but in-session saves use watchedSeconds (camelCase)
+    const savedSeconds = lessonProgress?.watchedSeconds ?? lessonProgress?.watched_seconds;
+
+    // Wait until we have both the video loaded and the progress data
+    if (!video || hasSeekedRef.current || savedSeconds == null || !duration) return;
+
+    if (video.readyState >= 1) { // HAVE_METADATA or higher
+      if (savedSeconds > 5 && savedSeconds < duration * 0.98) {
+        video.currentTime = savedSeconds;
+      }
+      hasSeekedRef.current = true;
+    }
+  }, [lessonProgress, duration]);
 
   // ─── Apply speed / volume ─────────────────────────────────────
   useEffect(() => {
@@ -223,25 +242,53 @@ export function VideoPlayer({ lesson, courseId, completionThreshold, onNext, onP
     return () => clearInterval(saveIntervalRef.current);
   }, [isPlaying, saveProgress]);
 
+  // ─── Save progress on tab close / app quit ────────────────────
+  useEffect(() => {
+    const saveBeacon = () => {
+      const video = videoRef.current;
+      if (!video || !lesson || !courseId) return;
+      const watched = Math.round(video.currentTime);
+      const dur = Math.round(video.duration) || null;
+      if (watched < 2) return; // Don't save if barely started
+      const url = `${window.location.protocol}//${window.location.hostname}:3001/api/progress`;
+      const body = JSON.stringify({
+        lessonId: lesson.id,
+        courseId,
+        watchedSeconds: watched,
+        durationSeconds: dur,
+        completed: 0,
+      });
+      navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }));
+    };
+
+    const handleBeforeUnload = () => saveBeacon();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') saveBeacon();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [lesson, courseId]);
+
   // ─── Video event handlers ─────────────────────────────────────
   const handleLoadedMetadata = useCallback(async () => {
     const video = videoRef.current;
     if (!video) return;
 
     const dur = video.duration;
+    // Updating duration in store will trigger the progress resume effect
     setDuration(dur);
 
     if (lesson && courseId && !lesson.duration_seconds) {
       try { await api.courses.updateLessonDuration(courseId, lesson.id, dur); } catch { }
     }
 
-    const savedSeconds = lessonProgress?.watchedSeconds;
-    if (savedSeconds && savedSeconds > 5 && savedSeconds < dur * 0.98) {
-      video.currentTime = savedSeconds;
-    }
-
     video.play().catch(() => { });
-  }, [lesson, courseId, lessonProgress, setDuration]);
+  }, [lesson, courseId, setDuration]);
 
   const handleTimeUpdate = () => {
     const video = videoRef.current;

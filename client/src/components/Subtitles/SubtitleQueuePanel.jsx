@@ -8,7 +8,7 @@ const POLL_ACTIVE_MS = 3000;
 const RECENT_DISMISS_MS = 30000;
 
 export function SubtitleQueuePanel() {
-    const { subtitleQueue, setSubtitleQueue } = useUIStore();
+    const { subtitleQueue, setSubtitleQueue, queuePanelOpen, setQueuePanelOpen } = useUIStore();
     const setLessonSubtitlePath = useCourseStore((s) => s.setLessonSubtitlePath);
     const activeIntervalRef = useRef(null);
     const dismissTimerRef = useRef(null);
@@ -20,7 +20,7 @@ export function SubtitleQueuePanel() {
         subtitleQueue.processing !== null ||
         subtitleQueue.queued.length > 0;
 
-    const hasContent = hasActiveJobs || subtitleQueue.recentlyCompleted.length > 0;
+    const hasContent = queuePanelOpen || hasActiveJobs || subtitleQueue.recentlyCompleted.length > 0;
 
     const poll = useRef(async () => {
         try {
@@ -31,7 +31,7 @@ export function SubtitleQueuePanel() {
         }
     }).current;
 
-    // Poll only while active jobs exist (3s). No background poll.
+    // Poll only while active jobs exist (3s).
     // New jobs are discovered via refreshSubtitleQueue() called after user actions.
     useEffect(() => {
         if (hasActiveJobs) {
@@ -41,8 +41,17 @@ export function SubtitleQueuePanel() {
         } else {
             clearInterval(activeIntervalRef.current);
         }
-        return () => clearInterval(activeIntervalRef.current);
+        return () => {
+            if (activeIntervalRef.current) clearInterval(activeIntervalRef.current);
+        };
     }, [hasActiveJobs, poll]);
+
+    // Fetch data immediately when manually opened
+    useEffect(() => {
+        if (queuePanelOpen) {
+            poll();
+        }
+    }, [queuePanelOpen, poll]);
 
     // Auto-dismiss recently completed items after 30s with no active jobs
     useEffect(() => {
@@ -94,6 +103,7 @@ export function SubtitleQueuePanel() {
     };
 
     const handleDismiss = () => {
+        setQueuePanelOpen(false); // Explicitly close it if user hits dismiss
         setSubtitleQueue({ processing: null, queued: [], recentlyCompleted: [] });
     };
 
@@ -477,6 +487,13 @@ export function SubtitleQueuePanel() {
                                             </div>
                                         ))}
                                     </div>
+                                </div>
+                            )}
+
+                            {/* Empty state when opened manually */}
+                            {totalJobs === 0 && subtitleQueue.recentlyCompleted.length === 0 && (
+                                <div style={{ textAlign: 'center', padding: '1.5rem 1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                    No active or recent subtitle jobs.
                                 </div>
                             )}
                         </div>

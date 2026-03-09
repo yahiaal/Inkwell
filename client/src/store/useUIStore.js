@@ -7,9 +7,12 @@ const useUIStore = create((set) => ({
   theme: 'dark',
   toasts: [],
   subtitleQueue: { processing: null, queued: [], recentlyCompleted: [] },
+  queuePanelOpen: false,
 
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
+  toggleQueuePanel: () => set((s) => ({ queuePanelOpen: !s.queuePanelOpen })),
+  setQueuePanelOpen: (open) => set({ queuePanelOpen: open }),
   openModal: (name) => set({ activeModal: name }),
   closeModal: () => set({ activeModal: null }),
   setTheme: (theme) => set({ theme }),

@@ -111,7 +111,7 @@ export default function Settings() {
   const handleClearProgress = async () => {
     try {
       // We call a direct fetch since api module doesn't have a clear-progress endpoint
-      await fetch(`${import.meta.env.VITE_API_URL}/api/progress/clear-all`, { method: 'DELETE' });
+      await fetch(`http://localhost:3001/api/progress/clear-all`, { method: 'DELETE' });
       addToast('All progress cleared.', 'success');
     } catch {
       addToast('Failed to clear progress.');

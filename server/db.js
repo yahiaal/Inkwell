@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
@@ -6,7 +5,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const DB_PATH = path.resolve(__dirname, process.env.DB_PATH || '../data/lms.db');
+const DB_PATH = path.resolve(__dirname, '../data/lms.db');
 
 // Ensure the data directory exists before opening the DB connection
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });

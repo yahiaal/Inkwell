@@ -7,6 +7,7 @@ import CourseDetail from './pages/CourseDetail.jsx';
 import CoursePlayer from './pages/CoursePlayer.jsx';
 import Stats from './pages/Stats.jsx';
 import Settings from './pages/Settings.jsx';
+import useUIStore from './store/useUIStore.js';
 
 const pageVariants = {
   initial: { opacity: 0, x: 20 },
@@ -46,6 +47,9 @@ function AnimatedRoutes() {
 function NavBar() {
   const location = useLocation();
   const isPlayer = location.pathname.includes('/play/');
+
+  const isQueueOpen = useUIStore((s) => s.queuePanelOpen);
+  const toggleQueue = useUIStore((s) => s.toggleQueuePanel);
 
   if (isPlayer) return null;
 
@@ -107,6 +111,13 @@ function NavBar() {
 
       {/* Nav links */}
       <div style={{ display: 'flex', gap: '0.25rem' }}>
+        <button
+          onClick={toggleQueue}
+          style={linkStyle({ isActive: isQueueOpen })}
+          title="Subtitle Queue"
+        >
+          🎙 <span style={{ fontFamily: 'Baloo 2', fontSize: '1rem', lineHeight: 1 }}>CC Queue</span>
+        </button>
         <NavLink to="/" end style={linkStyle}>
           🏠 Library
         </NavLink>

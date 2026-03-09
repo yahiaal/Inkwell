@@ -123,6 +123,7 @@ function processNext() {
             '-l', 'auto',           // auto-detect language
             '-pp',                  // print progress
             '-t', '4',              // threads
+            '-ml', '40',            // max line length for better readability
         ], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
 
         currentChild = whisper;

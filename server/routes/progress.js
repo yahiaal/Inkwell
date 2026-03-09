@@ -78,6 +78,24 @@ router.delete('/clear-all', (req, res) => {
   res.json({ ok: true });
 });
 
+// DELETE /api/progress/course/:courseId — reset progress for a specific course
+router.delete('/course/:courseId', (req, res) => {
+  const courseId = req.params.courseId;
+
+  db.transaction(() => {
+    // Delete progress rows
+    db.prepare('DELETE FROM progress WHERE course_id = ?').run(courseId);
+
+    // Reset course status
+    db.prepare("UPDATE courses SET status = 'not_started', last_accessed = NULL WHERE id = ?").run(courseId);
+
+    // Optional: Also clear bookmarks and notes if desired, but user asked for "progress"
+    // Usually progress = watched state. I'll stick to progress and course status.
+  })();
+
+  res.json({ ok: true });
+});
+
 // POST /api/progress/log-session — log daily stats
 router.post('/log-session', (req, res) => {
   const { courseId, minutesWatched, lessonsCompleted, date } = req.body;

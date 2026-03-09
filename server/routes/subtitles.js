@@ -14,7 +14,7 @@ const router = Router();
 
 // ─── POST /api/subtitles/generate ────────────────────────────
 router.post('/generate', (req, res) => {
-    const { lessonIds } = req.body;
+    const { lessonIds, force } = req.body;
     if (!Array.isArray(lessonIds) || lessonIds.length === 0) {
         return res.status(400).json({ error: 'lessonIds must be a non-empty array', code: 'INVALID_INPUT' });
     }
@@ -29,8 +29,8 @@ router.post('/generate', (req, res) => {
             continue;
         }
 
-        // Skip if already has subtitle
-        if (lesson.subtitle_path) {
+        // Skip if already has subtitle, UNLESS force is true
+        if (lesson.subtitle_path && !force) {
             skipped.push(lessonId);
             continue;
         }

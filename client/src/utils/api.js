@@ -1,4 +1,4 @@
-const envUrl = import.meta.env.VITE_API_URL;
+const envUrl = 'http://localhost:3001';
 const BASE_URL = (() => {
   if (!envUrl) return `http://${window.location.hostname}:3001`;
   if (envUrl.includes('localhost') && window.location.hostname !== 'localhost') {
@@ -79,6 +79,9 @@ export const api = {
       }),
 
     getResume: (courseId) => request(`/progress/${courseId}/resume`),
+
+    resetCourse: (courseId) =>
+      request(`/progress/course/${courseId}`, { method: 'DELETE' }),
   },
 
   // ─── Bookmarks ──────────────────────────────────────────────
@@ -135,10 +138,10 @@ export const api = {
 
   // ─── Subtitles ──────────────────────────────────────────────
   subtitles: {
-    generate: (lessonIds) =>
+    generate: (lessonIds, force = false) =>
       request('/subtitles/generate', {
         method: 'POST',
-        body: JSON.stringify({ lessonIds }),
+        body: JSON.stringify({ lessonIds, force }),
       }),
 
     getQueue: () => request('/subtitles/queue'),

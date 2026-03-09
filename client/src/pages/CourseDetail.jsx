@@ -50,6 +50,7 @@ export default function CourseDetail() {
   const [newTag, setNewTag] = useState('');
   const [review, setReview] = useState('');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [resumeLessonId, setResumeLessonId] = useState(null);
 
   // Subtitle state
@@ -126,6 +127,17 @@ export default function CourseDetail() {
       navigate('/');
     } catch (err) {
       addToast('Failed to delete: ' + err.message);
+    }
+  };
+
+  const handleResetProgress = async () => {
+    try {
+      await api.progress.resetCourse(id);
+      addToast('Course progress reset successfully', 'success');
+      setResetConfirmOpen(false);
+      fetchCourse(); // Refresh page data
+    } catch (err) {
+      addToast('Failed to reset progress: ' + err.message);
     }
   };
 
@@ -278,6 +290,9 @@ export default function CourseDetail() {
               {course.status === 'not_started' ? '▶ Start Course' : '▶ Resume Course'}
             </Button>
           )}
+          <Button variant="ghost" size="sm" onClick={() => setResetConfirmOpen(true)}>
+            Reset Progress
+          </Button>
           <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmOpen(true)}>
             Remove Course
           </Button>
@@ -374,6 +389,17 @@ export default function CourseDetail() {
           </div>
         )}
       </motion.div>
+
+      {/* Reset confirmation */}
+      <Modal open={resetConfirmOpen} onClose={() => setResetConfirmOpen(false)} title="Reset Progress?">
+        <p style={{ color: 'var(--text)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+          This will clear all your progress for <strong>{course.title}</strong>. Your bookmarks and notes will be kept.
+        </p>
+        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+          <Button variant="ghost" onClick={() => setResetConfirmOpen(false)}>Cancel</Button>
+          <Button variant="primary" onClick={handleResetProgress}>Reset Progress</Button>
+        </div>
+      </Modal>
 
       {/* Delete confirmation */}
       <Modal open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)} title="Remove Course?">

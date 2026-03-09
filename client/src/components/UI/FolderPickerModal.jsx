@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LoadingSpinner } from './LoadingSpinner.jsx';
 
-const BASE = import.meta.env.VITE_API_URL;
+const BASE = 'http://localhost:3001';
 
 async function listDir(dirPath) {
   const url = dirPath

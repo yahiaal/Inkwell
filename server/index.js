@@ -1,4 +1,3 @@
-import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import db from "./db.js";
@@ -20,7 +19,7 @@ db.prepare(
 ).run(new Date().toISOString());
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = 3001;
 
 app.use(
   cors({
