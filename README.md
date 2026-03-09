@@ -22,7 +22,15 @@
 - 📑 **Bookmarks & Notes** — Save exact timestamps and take per-lesson notes that auto-save while you learn.
 - 🔒 **100% Privacy** — Your data stays on your machine. No accounts, no cloud, no tracking.
 
-## 🚀 Quick Start
+## 🚀 Quick Start (Windows)
+
+Inkwell is now **Zero-Config** and **Portable**. Just download and run:
+
+1.  **Double-click `start-inkwell.vbs`** (for a silent background start) or `start-inkwell.bat` (to see the console).
+2.  The script will **automatically install dependencies** if they are missing.
+3.  Once ready, visit: **[http://localhost:5173](http://localhost:5173)**
+
+### 💻 Manual Start (Cross-Platform)
 
 Ensure you have [Node.js](https://nodejs.org/) installed, then run:
 
