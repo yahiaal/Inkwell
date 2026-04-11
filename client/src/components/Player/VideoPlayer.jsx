@@ -17,6 +17,7 @@ export function VideoPlayer({ lesson, courseId, completionThreshold, onNext, onP
   const lastLoggedMinuteRef = useRef(0);
   const hideControlsTimer = useRef(null);
   const hasSeekedRef = useRef(false);
+  const wasFullscreenRef = useRef(false);
 
   const [videoError, setVideoError] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -198,7 +199,8 @@ export function VideoPlayer({ lesson, courseId, completionThreshold, onNext, onP
   useEffect(() => {
     if (!lesson) return;
     setVideoError(null);
-    hasSeekedRef.current = false; // Reset seek state for new lesson
+    hasSeekedRef.current = false;
+    if (document.fullscreenElement) wasFullscreenRef.current = true;
     const video = videoRef.current;
     if (!video) return;
     video.pause();
@@ -280,7 +282,6 @@ export function VideoPlayer({ lesson, courseId, completionThreshold, onNext, onP
     if (!video) return;
 
     const dur = video.duration;
-    // Updating duration in store will trigger the progress resume effect
     setDuration(dur);
 
     if (lesson && courseId && !lesson.duration_seconds) {
@@ -288,6 +289,16 @@ export function VideoPlayer({ lesson, courseId, completionThreshold, onNext, onP
     }
 
     video.play().catch(() => { });
+
+    if (wasFullscreenRef.current) {
+      wasFullscreenRef.current = false;
+      const el = containerRef.current;
+      if (el) {
+        requestAnimationFrame(() => {
+          el.requestFullscreen?.().catch(() => { });
+        });
+      }
+    }
   }, [lesson, courseId, setDuration]);
 
   const handleTimeUpdate = () => {
@@ -304,6 +315,7 @@ export function VideoPlayer({ lesson, courseId, completionThreshold, onNext, onP
 
   const handleEnded = async () => {
     setPlaying(false);
+    if (document.fullscreenElement) wasFullscreenRef.current = true;
     await saveProgress(true);
     if (settings?.auto_advance !== 'false') onNext?.();
   };

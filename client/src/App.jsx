@@ -20,10 +20,16 @@ const pageTransition = { duration: 0.2, ease: 'easeOut' };
 function AnimatedRoutes() {
   const location = useLocation();
 
+  const key = (() => {
+    const m = location.pathname.match(/^\/course\/(\d+)\/play\//);
+    if (m) return `/course/${m[1]}/play`;
+    return location.pathname;
+  })();
+
   return (
     <AnimatePresence mode="wait">
       <motion.div
-        key={location.pathname}
+        key={key}
         variants={pageVariants}
         initial="initial"
         animate="animate"
