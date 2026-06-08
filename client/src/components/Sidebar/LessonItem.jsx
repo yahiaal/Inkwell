@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { formatTime } from '../../utils/formatters.js';
@@ -9,16 +9,20 @@ import { api } from '../../utils/api.js';
 export const LessonItem = memo(function LessonItem({ lesson, courseId, activeLessonId }) {
   const navigate = useNavigate();
   const progress = useProgressStore((s) => s.progressMap[lesson.id]);
+  const setProgress = useProgressStore((s) => s.setProgress);
   const subtitleQueue = useUIStore((s) => s.subtitleQueue);
   const openModal = useUIStore((s) => s.openModal);
   const refreshSubtitleQueue = useUIStore((s) => s.refreshSubtitleQueue);
+  const addToast = useUIStore((s) => s.addToast);
+  const [markingComplete, setMarkingComplete] = useState(false);
   const isActive = lesson.id === activeLessonId;
-  const isCompleted = progress?.completed;
+  const isCompleted = !!progress?.completed;
 
   // Derive subtitle job status from shared queue state
   const isProcessing = subtitleQueue.processing?.lessonId === lesson.id;
   const isQueued = subtitleQueue.queued.some((j) => j.lessonId === lesson.id);
   const hasActiveJob = isProcessing || isQueued;
+  const resourceCount = lesson.resources?.length ?? 0;
 
   const handleClick = () => {
     navigate(`/course/${courseId}/play/${lesson.id}`);
@@ -32,6 +36,32 @@ export const LessonItem = memo(function LessonItem({ lesson, courseId, activeLes
       openModal('subtitle-queue'); // Open the queue panel immediately
     } catch (err) {
       console.error('Network error triggering subtitle generation:', err);
+    }
+  };
+
+  const handleMarkComplete = async (e) => {
+    e.stopPropagation();
+    if (isCompleted || markingComplete) return;
+
+    setMarkingComplete(true);
+    try {
+      const durationSeconds = lesson.duration_seconds ?? progress?.duration_seconds ?? null;
+      const saved = await api.progress.markComplete({
+        courseId,
+        lessonId: lesson.id,
+        durationSeconds,
+      });
+      setProgress(lesson.id, {
+        ...saved,
+        watchedSeconds: saved.watched_seconds ?? durationSeconds ?? 0,
+        durationSeconds: saved.duration_seconds ?? durationSeconds,
+        completed: true,
+      });
+      addToast('Lesson marked complete', 'success');
+    } catch (err) {
+      addToast('Failed to mark complete: ' + err.message);
+    } finally {
+      setMarkingComplete(false);
     }
   };
 
@@ -53,7 +83,10 @@ export const LessonItem = memo(function LessonItem({ lesson, courseId, activeLes
       }}
     >
       {/* Completion badge */}
-      <span
+      <button
+        onClick={handleMarkComplete}
+        disabled={isCompleted || markingComplete}
+        title={isCompleted ? 'Completed' : 'Mark lesson complete'}
         style={{
           minWidth: '1.4rem',
           height: '1.4rem',
@@ -67,10 +100,13 @@ export const LessonItem = memo(function LessonItem({ lesson, courseId, activeLes
           fontWeight: 700,
           color: isCompleted ? 'white' : isActive ? 'var(--ink)' : 'var(--text-muted)',
           flexShrink: 0,
+          cursor: isCompleted ? 'default' : 'pointer',
+          padding: 0,
+          lineHeight: 1,
         }}
       >
         {isCompleted ? '✓' : (lesson.sort_order != null ? lesson.sort_order + 1 : '')}
-      </span>
+      </button>
 
       {/* Title */}
       <span
@@ -91,6 +127,26 @@ export const LessonItem = memo(function LessonItem({ lesson, courseId, activeLes
           </span>
         )}
       </span>
+
+      {/* Resource badge */}
+      {resourceCount > 0 && (
+        <span
+          title={`${resourceCount} resource${resourceCount === 1 ? '' : 's'}`}
+          style={{
+            fontSize: '0.6rem',
+            fontWeight: 800,
+            padding: '0.05rem 0.25rem',
+            borderRadius: '3px',
+            backgroundColor: 'var(--accent)',
+            color: 'var(--ink)',
+            border: '1px solid var(--ink)',
+            flexShrink: 0,
+            lineHeight: 1.3,
+          }}
+        >
+          {resourceCount === 1 ? 'RES' : `RES ${resourceCount}`}
+        </span>
+      )}
 
       {/* Subtitle badge */}
       {lesson.subtitle_path ? (

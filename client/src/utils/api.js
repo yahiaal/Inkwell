@@ -82,6 +82,18 @@ export const api = {
 
     resetCourse: (courseId) =>
       request(`/progress/course/${courseId}`, { method: 'DELETE' }),
+
+    markComplete: ({ courseId, lessonId, durationSeconds }) =>
+      request('/progress', {
+        method: 'POST',
+        body: JSON.stringify({
+          courseId,
+          lessonId,
+          watchedSeconds: durationSeconds ?? 0,
+          durationSeconds,
+          completed: 1,
+        }),
+      }),
   },
 
   // ─── Bookmarks ──────────────────────────────────────────────
@@ -160,4 +172,6 @@ export const api = {
   // ─── Media URLs (not fetched, used as src attributes) ───────
   videoUrl: (lessonId) => `${BASE_URL}/api/video/${lessonId}`,
   subtitleUrl: (lessonId) => `${BASE_URL}/api/subtitle/${lessonId}`,
+  resourceUrl: (resourceId, download = false) =>
+    `${BASE_URL}/api/resources/${resourceId}${download ? '?download=1' : ''}`,
 };

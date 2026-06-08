@@ -17,6 +17,28 @@ import usePlayerStore from '../store/usePlayerStore.js';
 import useProgressStore from '../store/useProgressStore.js';
 import useUIStore from '../store/useUIStore.js';
 
+function formatBytes(bytes) {
+  if (!bytes && bytes !== 0) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function resourceTypeLabel(type) {
+  const labels = {
+    archive: 'Archive',
+    document: 'Doc',
+    html: 'HTML',
+    image: 'Image',
+    link: 'Link',
+    pdf: 'PDF',
+    presentation: 'Slides',
+    spreadsheet: 'Sheet',
+    text: 'Text',
+  };
+  return labels[type] ?? (type ? type.toUpperCase() : 'File');
+}
+
 export default function CoursePlayer() {
   const { id, lessonId } = useParams();
   const navigate = useNavigate();
@@ -310,11 +332,11 @@ export default function CoursePlayer() {
           )}
         </div>
 
-        {/* Tabs: Bookmarks / Notes */}
+        {/* Tabs: Bookmarks / Resources / Notes */}
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--surface)', minHeight: '180px' }}>
           {/* Tab headers */}
           <div style={{ display: 'flex', borderBottom: '2px solid var(--ink)', flexShrink: 0 }}>
-            {['bookmarks', 'notes'].map((tab) => (
+            {['bookmarks', 'resources', 'notes'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -332,7 +354,11 @@ export default function CoursePlayer() {
                   textTransform: 'capitalize',
                 }}
               >
-                {tab === 'bookmarks' ? `🔖 Bookmarks (${bookmarks.length})` : '📝 Notes'}
+                {tab === 'bookmarks'
+                  ? `🔖 Bookmarks (${bookmarks.length})`
+                  : tab === 'resources'
+                    ? `Resources (${currentLesson.resources?.length ?? 0})`
+                    : '📝 Notes'}
               </button>
             ))}
           </div>
@@ -368,6 +394,84 @@ export default function CoursePlayer() {
                         >
                           ×
                         </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'resources' && (
+              <div>
+                {(currentLesson.resources?.length ?? 0) === 0 ? (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                    No resources attached to this lesson.
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {currentLesson.resources.map((resource) => (
+                      <div
+                        key={resource.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          padding: '0.55rem 0.7rem',
+                          borderRadius: '8px',
+                          border: '2px solid var(--ink)',
+                          backgroundColor: 'var(--surface-alt)',
+                        }}
+                      >
+                        <span
+                          style={{
+                            minWidth: '3rem',
+                            textAlign: 'center',
+                            fontSize: '0.7rem',
+                            fontFamily: 'Nunito, sans-serif',
+                            fontWeight: 800,
+                            color: 'var(--ink)',
+                            backgroundColor: 'var(--accent)',
+                            border: '1.5px solid var(--ink)',
+                            borderRadius: '5px',
+                            padding: '0.12rem 0.3rem',
+                          }}
+                        >
+                          {resourceTypeLabel(resource.file_type)}
+                        </span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <a
+                            className="line-clamp-1"
+                            href={api.resourceUrl(resource.id)}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              display: 'block',
+                              color: 'var(--text)',
+                              fontFamily: 'Nunito, sans-serif',
+                              fontWeight: 700,
+                              fontSize: '0.9rem',
+                              textDecoration: 'none',
+                            }}
+                          >
+                            {resource.name}
+                          </a>
+                          <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.1rem' }}>
+                            {formatBytes(resource.size_bytes)}
+                          </p>
+                        </div>
+                        <a
+                          href={api.resourceUrl(resource.id, true)}
+                          style={{
+                            color: 'var(--accent)',
+                            fontSize: '0.8rem',
+                            fontFamily: 'Nunito, sans-serif',
+                            fontWeight: 800,
+                            textDecoration: 'none',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          Download
+                        </a>
                       </div>
                     ))}
                   </div>

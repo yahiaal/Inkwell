@@ -5,6 +5,28 @@ import { scanCourseFolder } from '../utils/scanner.js';
 
 const router = Router();
 
+function attachResources(lessons) {
+  if (lessons.length === 0) return lessons;
+
+  const resources = db.prepare(`
+    SELECT * FROM lesson_resources
+    WHERE lesson_id IN (${lessons.map(() => '?').join(',')})
+    ORDER BY sort_order, name
+  `).all(...lessons.map((lesson) => lesson.id));
+
+  const byLesson = new Map();
+  for (const resource of resources) {
+    const list = byLesson.get(resource.lesson_id) ?? [];
+    list.push(resource);
+    byLesson.set(resource.lesson_id, list);
+  }
+
+  return lessons.map((lesson) => ({
+    ...lesson,
+    resources: byLesson.get(lesson.id) ?? [],
+  }));
+}
+
 // POST /api/courses/scan
 router.post('/scan', (req, res) => {
   const { folderPath } = req.body;
@@ -55,14 +77,18 @@ router.post('/scan', (req, res) => {
       courseId = result.lastInsertRowid;
     }
 
-    // Insert lessons
+    // Insert lessons and their attached resources
     const insertLesson = db.prepare(`
       INSERT INTO lessons (course_id, title, file_path, subtitle_path, section_path, depth_level, sort_order, duration_seconds)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
+    const insertResource = db.prepare(`
+      INSERT INTO lesson_resources (lesson_id, name, file_path, file_type, size_bytes, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
     const insertAllLessons = db.transaction(() => {
       for (const lesson of flatLessons) {
-        insertLesson.run(
+        const result = insertLesson.run(
           courseId,
           lesson.title,
           lesson.file_path,
@@ -72,12 +98,23 @@ router.post('/scan', (req, res) => {
           lesson.sort_order,
           lesson.duration_seconds
         );
+
+        for (const resource of lesson.resources ?? []) {
+          insertResource.run(
+            result.lastInsertRowid,
+            resource.name,
+            resource.file_path,
+            resource.file_type,
+            resource.size_bytes,
+            resource.sort_order
+          );
+        }
       }
     });
     insertAllLessons();
 
     const course = db.prepare('SELECT * FROM courses WHERE id = ?').get(courseId);
-    const lessons = db.prepare('SELECT * FROM lessons WHERE course_id = ? ORDER BY sort_order').all(courseId);
+    const lessons = attachResources(db.prepare('SELECT * FROM lessons WHERE course_id = ? ORDER BY sort_order').all(courseId));
 
     return res.json({ ...course, tags: JSON.parse(course.tags || '[]'), lessons });
   } catch (err) {
@@ -112,9 +149,10 @@ router.get('/:id', (req, res) => {
   const course = db.prepare('SELECT * FROM courses WHERE id = ?').get(req.params.id);
   if (!course) return res.status(404).json({ error: 'Course not found', code: 'COURSE_NOT_FOUND' });
 
-  const lessons = db
-    .prepare('SELECT * FROM lessons WHERE course_id = ? ORDER BY sort_order')
-    .all(course.id);
+  const lessons = attachResources(
+    db.prepare('SELECT * FROM lessons WHERE course_id = ? ORDER BY sort_order')
+      .all(course.id)
+  );
 
   // Build nested tree from flat lesson list
   const tree = buildTree(lessons);

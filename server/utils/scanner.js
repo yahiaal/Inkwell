@@ -4,6 +4,7 @@ import { execSync } from 'child_process';
 
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.webm', '.mkv', '.mov', '.avi']);
 const SUBTITLE_EXTENSIONS = new Set(['.vtt', '.srt']);
+const IGNORED_RESOURCE_NAMES = new Set(['thumbs.db', '.ds_store']);
 
 /**
  * Natural sort comparator: "10 - Foo" comes after "2 - Bar"
@@ -95,6 +96,122 @@ function findSubtitle(videoPath) {
   return null;
 }
 
+function isResourceFile(fileName) {
+  const lower = fileName.toLowerCase();
+  const ext = path.extname(lower);
+  return (
+    ext &&
+    !VIDEO_EXTENSIONS.has(ext) &&
+    !SUBTITLE_EXTENSIONS.has(ext) &&
+    !lower.startsWith('.') &&
+    !IGNORED_RESOURCE_NAMES.has(lower)
+  );
+}
+
+function classifyResource(fileName) {
+  const ext = path.extname(fileName).toLowerCase();
+  if (['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg'].includes(ext)) return 'image';
+  if (['.pdf'].includes(ext)) return 'pdf';
+  if (['.html', '.htm'].includes(ext)) return 'html';
+  if (['.url', '.webloc'].includes(ext)) return 'link';
+  if (['.txt', '.md', '.rtf'].includes(ext)) return 'text';
+  if (['.doc', '.docx'].includes(ext)) return 'document';
+  if (['.xls', '.xlsx', '.csv', '.tsv'].includes(ext)) return 'spreadsheet';
+  if (['.ppt', '.pptx'].includes(ext)) return 'presentation';
+  if (['.zip', '.rar', '.7z', '.tar', '.gz'].includes(ext)) return 'archive';
+  return ext ? ext.slice(1) : 'file';
+}
+
+function resourceName(fileName) {
+  const cleaned = cleanTitle(fileName);
+  return cleaned || fileName;
+}
+
+function baseWords(fileName) {
+  const base = path.basename(fileName, path.extname(fileName)).toLowerCase();
+  return base.split(/[\s._\-–—]+/).filter(Boolean);
+}
+
+function leadingLessonNumber(fileName) {
+  const match = path.basename(fileName).match(/^\s*(\d+)(?=[\s.)_-])/);
+  return match ? Number(match[1]) : null;
+}
+
+function basenameScore(videoName, resourceNameValue) {
+  const videoBase = path.basename(videoName, path.extname(videoName)).toLowerCase();
+  const resourceBase = path.basename(resourceNameValue, path.extname(resourceNameValue)).toLowerCase();
+
+  const videoNumber = leadingLessonNumber(videoName);
+  const resourceNumber = leadingLessonNumber(resourceNameValue);
+  if (videoNumber != null && videoNumber === resourceNumber) return 95;
+
+  if (videoBase === resourceBase) return 100;
+  if (resourceBase.startsWith(videoBase) || videoBase.startsWith(resourceBase)) return 90;
+
+  const videoWords = baseWords(videoName);
+  const resourceWords = baseWords(resourceNameValue);
+  if (videoWords.length === 0 || resourceWords.length === 0) return 0;
+
+  const shared = videoWords.filter((w) => resourceWords.includes(w)).length;
+  return shared / Math.max(videoWords.length, resourceWords.length);
+}
+
+function statResource(filePath, fileName, sortOrder) {
+  let sizeBytes = null;
+  try {
+    sizeBytes = fs.statSync(filePath).size;
+  } catch {
+    sizeBytes = null;
+  }
+
+  return {
+    name: resourceName(fileName),
+    file_path: filePath,
+    file_type: classifyResource(fileName),
+    size_bytes: sizeBytes,
+    sort_order: sortOrder,
+  };
+}
+
+function assignResources(dirPath, videoFiles, resourceFiles) {
+  const resourcesByVideo = new Map(videoFiles.map((file) => [file, []]));
+  if (videoFiles.length === 0 || resourceFiles.length === 0) return resourcesByVideo;
+
+  const ordered = [...videoFiles.map((name) => ({ name, kind: 'video' })), ...resourceFiles.map((name) => ({ name, kind: 'resource' }))]
+    .sort((a, b) => naturalCompare(a.name, b.name));
+
+  for (const resource of resourceFiles) {
+    let targetVideo = null;
+    let bestScore = 0;
+
+    for (const video of videoFiles) {
+      const score = basenameScore(video, resource);
+      if (score > bestScore) {
+        bestScore = score;
+        targetVideo = video;
+      }
+    }
+
+    if (bestScore < 0.5) {
+      const resourceIndex = ordered.findIndex((item) => item.kind === 'resource' && item.name === resource);
+      for (let i = resourceIndex - 1; i >= 0; i--) {
+        if (ordered[i].kind === 'video') {
+          targetVideo = ordered[i].name;
+          break;
+        }
+      }
+    }
+
+    if (targetVideo) {
+      const current = resourcesByVideo.get(targetVideo) ?? [];
+      current.push(statResource(path.join(dirPath, resource), resource, current.length));
+      resourcesByVideo.set(targetVideo, current);
+    }
+  }
+
+  return resourcesByVideo;
+}
+
 /**
  * Attempt to get video duration via ffprobe.
  * Returns seconds as a number, or null if ffprobe is unavailable or errors.
@@ -140,6 +257,13 @@ function scanDirectory(dirPath, sectionPath, depth, flatLessons) {
     .map((e) => e.name)
     .sort(naturalCompare);
 
+  const resourceFiles = entries
+    .filter((e) => e.isFile() && isResourceFile(e.name))
+    .map((e) => e.name)
+    .sort(naturalCompare);
+
+  const resourcesByVideo = assignResources(dirPath, files, resourceFiles);
+
   // Build direct lessons (video files in this folder)
   const directLessons = files.map((fileName) => {
     const filePath = path.join(dirPath, fileName);
@@ -151,6 +275,7 @@ function scanDirectory(dirPath, sectionPath, depth, flatLessons) {
       depth_level: depth,
       sort_order: 0, // assigned after full traversal
       duration_seconds: getVideoDuration(filePath),
+      resources: resourcesByVideo.get(fileName) ?? [],
     };
   });
 

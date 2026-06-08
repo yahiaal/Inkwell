@@ -44,6 +44,16 @@ db.exec(`
     duration_seconds INTEGER
   );
 
+  CREATE TABLE IF NOT EXISTS lesson_resources (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    lesson_id  INTEGER NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+    name       TEXT NOT NULL,
+    file_path  TEXT NOT NULL,
+    file_type  TEXT,
+    size_bytes INTEGER,
+    sort_order INTEGER NOT NULL DEFAULT 0
+  );
+
   CREATE TABLE IF NOT EXISTS progress (
     id               INTEGER PRIMARY KEY AUTOINCREMENT,
     course_id        INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,

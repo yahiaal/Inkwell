@@ -12,6 +12,7 @@ import videoRouter from "./routes/video.js";
 import subtitleRouter from "./routes/subtitle.js";
 import subtitlesRouter from "./routes/subtitles.js";
 import browseRouter from "./routes/browse.js";
+import resourcesRouter from "./routes/resources.js";
 
 // ─── Stale subtitle job cleanup on startup ───────────────────
 db.prepare(
@@ -46,6 +47,7 @@ app.use("/api/video", videoRouter);
 app.use("/api/subtitle", subtitleRouter);
 app.use("/api/subtitles", subtitlesRouter);
 app.use("/api/browse-folder", browseRouter);
+app.use("/api/resources", resourcesRouter);
 
 // Root route for health check
 app.get("/", (req, res) => {
